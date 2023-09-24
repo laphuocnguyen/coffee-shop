@@ -1,0 +1,44 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_PASSWORD: 'postgres'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./deployment/sql/initialize_database.sql:/docker-entrypoint-initdb.d/1-initialize_database.sql
+    ports:
+      - 5432:5432
+  sonarqube:
+    image: sonarqube:10.2.1-community
+    depends_on:
+      - db
+    ports:
+      - "9000:9000"
+    environment:
+      SONAR_JDBC_URL: 'jdbc:postgresql://db:5432/sonarqubedb'
+      SONAR_JDBC_USERNAME: 'sonarqube'
+      SONAR_JDBC_PASSWORD: 'sonarqube'
+      sonar.forceAuthentication: 'false'
+  product:
+    build:
+      context: '.'
+    environment:
+      SPRING_DATASOURCE_URL: 'jdbc:postgresql://db:5432/coffee_shop'
+      SPRING_DATASOURCE_USERNAME: 'product'
+      SPRING_DATASOURCE_PASSWORD: 'product'
+      SPRING_JPA_SHOW-SQL: 'false'
+    ports:
+      - 8080:8080
+    deploy:
+      resources:
+          limits:
+            cpus: '0.5'
+            memory: 512M
+          reservations:
+            cpus: '0.25'
+            memory: 128M
+    depends_on:
+      - "db"
+volumes:
+  postgres-data:
